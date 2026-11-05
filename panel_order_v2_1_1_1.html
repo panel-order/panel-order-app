@@ -1,0 +1,1284 @@
+<!-- ... existing code ... -->
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useMemo, useEffect } = React;
+
+    // 안전한 아이콘 헬퍼 (CDN 로드 지연·차단 시에도 절대 에러가 나지 않도록 보장)
+    const LucidePkg = window.LucideReact || window.lucideReact || {};
+    const makeIcon = (name, fallbackEmoji) => {
+      if (LucidePkg[name]) return LucidePkg[name];
+      return ({ className = '' }) => (
+        <span className={`inline-flex items-center justify-center select-none leading-none ${className}`} aria-hidden="true">
+          {fallbackEmoji}
+        </span>
+      );
+    };
+
+    const Home = makeIcon('Home', '🏠');
+    const HardHat = makeIcon('HardHat', '🦺');
+    const Building2 = makeIcon('Building2', '🏗️');
+    const User = makeIcon('User', '👤');
+    const MapPin = makeIcon('MapPin', '📍');
+    const Wind = makeIcon('Wind', '🌬️');
+    const CloudRain = makeIcon('CloudRain', '🌧️');
+    const Sun = makeIcon('Sun', '☀️');
+    const ShieldCheck = makeIcon('ShieldCheck', '🛡️');
+    const ShieldAlert = makeIcon('ShieldAlert', '⚠️');
+    const AlertTriangle = makeIcon('AlertTriangle', '⚠️');
+    const Plus = makeIcon('Plus', '＋');
+    const Search = makeIcon('Search', '🔍');
+    const Filter = makeIcon('Filter', '⚙️');
+    const CheckCircle2 = makeIcon('CheckCircle2', '✅');
+    const Clock = makeIcon('Clock', '🕒');
+    const Phone = makeIcon('Phone', '📞');
+    const MessageSquare = makeIcon('MessageSquare', '💬');
+    const ChevronRight = makeIcon('ChevronRight', '›');
+    const Lock = makeIcon('Lock', '🔒');
+    const Unlock = makeIcon('Unlock', '🔓');
+    const FileText = makeIcon('FileText', '📄');
+    const Upload = makeIcon('Upload', '📤');
+    const Navigation = makeIcon('Navigation', '🧭');
+    const Copy = makeIcon('Copy', '📋');
+    const Flag = makeIcon('Flag', '🚩');
+    const Ban = makeIcon('Ban', '🚫');
+    const Award = makeIcon('Award', '🏅');
+    const RefreshCw = makeIcon('RefreshCw', '🔄');
+    const LogOut = makeIcon('LogOut', '🚪');
+    const Trash2 = makeIcon('Trash2', '🗑️');
+    const Bell = makeIcon('Bell', '🔔');
+    const Moon = makeIcon('Moon', '🌙');
+    const Settings = makeIcon('Settings', '⚙️');
+    const X = makeIcon('X', '✕');
+    const Info = makeIcon('Info', 'ℹ️');
+    const Wrench = makeIcon('Wrench', '🔧');
+    const Users = makeIcon('Users', '👥');
+    const DollarSign = makeIcon('DollarSign', '💵');
+    const FileCheck = makeIcon('FileCheck', '☑️');
+    const History = makeIcon('History', '🕘');
+    const SlidersHorizontal = makeIcon('SlidersHorizontal', '🎚️');
+    const Sparkles = makeIcon('Sparkles', '✨');
+    const Check = makeIcon('Check', '✓');
+    const Eye = makeIcon('Eye', '👁️');
+    const EyeOff = makeIcon('EyeOff', '🙈');
+
+// ==========================================
+// 1. 상수 정의 (Constants)
+// ==========================================
+const REGIONS_17 = [
+  '전국 전체', '서울', '경기 북부', '경기 남부', '인천', '강원',
+  '충북', '충남/세종', '대전', '전북', '전남/광주', '경북/대구',
+  '경남', '부산', '울산', '제주'
+];
+
+const PANEL_LABELS = {
+  ALL: '전체 판넬',
+  GW: '그라스울(GW)',
+  EPS: 'EPS 판넬',
+  URETHANE: '우레탄',
+  ZINC: '징크 판넬',
+  AL: 'AL 복합판넬',
+  LOUVER: '루바 판넬',
+};
+
+const TEAM_UNIT_LABELS = {
+  SINGLE_MASTER: '기공 1인',
+  PAIR_2: '2인 1조 (기공1+조공1)',
+  TEAM_3: '3인 1조 (기공2+조공1)',
+  FULL_TEAM: '시공팀 전체 (4인+)',
+  NEGOTIABLE: '단가 협의 (인원·단가 현장 조율)',
+};
+
+// ==========================================
+// 2. 초기 시드 데이터 (Mock Database)
+// ==========================================
+const INITIAL_JOBS = [
+  {
+    id: 'job-101',
+    title: '평택 고덕 물류센터 외벽 GW 100T 판넬 시공 2인1조 구인',
+    regionGroup: '경기 남부',
+    regionDetail: '평택시 고덕면',
+    panelKind: 'GW',
+    fireCertStatus: 'VERIFIED',
+    fireCertDocNumber: '제2026-KFI-0892호 (준불연 시험성적서 검수완료)',
+    teamUnit: 'PAIR_2',
+    wageMode: 'INDIVIDUAL',
+    masterWage: 300000,
+    helperWage: 200000,
+    teamTotalWage: 500000,
+    workHours: '07:00 ~ 17:00',
+    breakHours: '12:00~13:00 (오전/오후 참 각 30분)',
+    overtimeRule: '연장 시 시간당 45,000원 별도 정산',
+    payerEntity: '(주)한울테크건축 (원청 직불 약정)',
+    payTiming: '당일 작업 종료 후 18:00 계좌이체',
+    healthCheckRequired: true,
+    safetyEduRequired: true,
+    cancelCompensation: true,
+    cancelCompensationAmount: 100000,
+    cancelCondition: '현장 자재 미입고 등 고용주 귀책 당일 취소 시 팀당 100,000원 지급 (고용주 측정·재원 부담, 출역 증빙 필수)',
+    gateMemo: '북문 3번 게이트 진입 후 우측 가설사무실 앞 하차 (신호수 대기)',
+    address: '경기도 평택시 고덕국제대로 112 현장 북문 3번 게이트',
+    workDate: '2026-11-03',
+    slotsTotal: 2,
+    slotsFilled: 1,
+    helmetLikes: 18,
+    managerName: '김철수 현장소장',
+    managerOrg: '(주)한울테크건축',
+    managerPhoneMasked: '010-****-4821',
+    managerPhoneReal: '010-8912-4821',
+    managerSafetyScore: 96.4,
+    industrialAccident3Y: false,
+    weather: {
+      gridNx: 62,
+      gridNy: 114,
+      stationName: '평택 고덕 격자(62,114)',
+      dataType: '단기예보',
+      announcedAt: '2026-11-02 08:00',
+      targetAt: '2026-11-03 09:00',
+      queriedAt: '2026-11-02 10:55',
+      tempC: 11.5,
+      rainMm: 0,
+      windSpeedMs: 11.4,
+      windType: '예보풍속',
+      hasGustData: false,
+      isValid: true,
+      ruleVersion: '안전보건규칙 제37조 (2026.06 기준표 v2.1)'
+    },
+    svgTheme: 'emerald',
+    lifecycleStage: 'OFFERED'
+  },
+  {
+    id: 'job-102',
+    title: '이천 냉동창고 우레탄 150T 칸막이 시공 베테랑 팀 모집',
+    regionGroup: '경기 남부',
+    regionDetail: '이천시 마장면',
+    panelKind: 'URETHANE',
+    fireCertStatus: 'PENDING',
+    teamUnit: 'TEAM_3',
+    wageMode: 'INDIVIDUAL',
+    masterWage: 320000,
+    helperWage: 210000,
+    teamTotalWage: 850000,
+    workHours: '07:30 ~ 17:30',
+    breakHours: '중식 1시간 + 휴식 1시간',
+    overtimeRule: '야간 작업 없음',
+    payerEntity: '대성판넬이엔지 (전문건설업)',
+    payTiming: '익일 오전 10시 이내 칼정산',
+    healthCheckRequired: false,
+    safetyEduRequired: true,
+    cancelCompensation: true,
+    cancelCompensationAmount: 150000,
+    cancelCondition: '고용주 귀책 현장 취소 시 교통비·대기보상금 150,000원 지급 (고용주 측정·직접 지급 약정)',
+    gateMemo: '정문 경비실 출입명부 작성 후 B동 내부 하역장 진입',
+    address: '경기도 이천시 마장면 덕평로 482번길 30',
+    workDate: '2026-11-04',
+    slotsTotal: 1,
+    slotsFilled: 0,
+    helmetLikes: 29,
+    managerName: '박상훈 공사부장',
+    managerOrg: '대성판넬이엔지',
+    managerPhoneMasked: '010-****-7739',
+    managerPhoneReal: '010-3341-7739',
+    managerSafetyScore: 89.2,
+    industrialAccident3Y: false,
+    weather: {
+      gridNx: 68,
+      gridNy: 117,
+      stationName: '이천 마장 격자(68,117)',
+      dataType: '실황(초단기)',
+      announcedAt: '2026-11-02 10:30',
+      targetAt: '2026-11-02 11:00',
+      queriedAt: '2026-11-02 10:58',
+      tempC: 14.2,
+      rainMm: 0,
+      windSpeedMs: 4.8,
+      windType: '10분 평균풍속',
+      hasGustData: false,
+      isValid: true,
+      ruleVersion: '안전보건규칙 제37조 (2026.06 기준표 v2.1)'
+    },
+    svgTheme: 'amber',
+    lifecycleStage: 'APPLIED'
+  },
+  {
+    id: 'job-103',
+    title: '천안 아산 산단 공장동 지붕 징크판넬 및 후레싱 마감 기공 1인',
+    regionGroup: '충남/세종',
+    regionDetail: '천안시 서북구',
+    panelKind: 'ZINC',
+    fireCertStatus: 'NONE',
+    teamUnit: 'SINGLE_MASTER',
+    wageMode: 'INDIVIDUAL',
+    masterWage: 330000,
+    helperWage: 0,
+    teamTotalWage: 330000,
+    workHours: '07:00 ~ 17:00',
+    breakHours: '12:00 ~ 13:00',
+    overtimeRule: '조기 마감 시에도 일당 전액 지급',
+    payerEntity: '충청스틸하우징',
+    payTiming: '당일 현장 직불',
+    cancelCompensation: false,
+    cancelCondition: '우천 시 전일 18시 이전 상호 일정 연기 협의',
+    gateMemo: '제2공장 후문 스카이장비 주차 구역 옆 집결',
+    address: '충청남도 천안시 서북구 직산읍 4산단로 55',
+    workDate: '2026-11-05',
+    slotsTotal: 3,
+    slotsFilled: 2,
+    helmetLikes: 11,
+    managerName: '이정호 반장',
+    managerOrg: '충청스틸하우징',
+    managerPhoneMasked: '010-****-9012',
+    managerPhoneReal: '010-5582-9012',
+    managerSafetyScore: 82.0,
+    industrialAccident3Y: false,
+    weather: {
+      gridNx: 63,
+      gridNy: 110,
+      stationName: '천안 직산 격자(63,110)',
+      dataType: '단기예보',
+      announcedAt: '2026-11-02 08:00',
+      targetAt: '2026-11-05 09:00',
+      queriedAt: '2026-11-02 10:55',
+      tempC: 9.8,
+      rainMm: 12.0,
+      windSpeedMs: 15.6,
+      windType: '예보풍속',
+      hasGustData: false,
+      isValid: true,
+      ruleVersion: '안전보건규칙 제37조 (2026.06 기준표 v2.1)'
+    },
+    svgTheme: 'rose',
+    lifecycleStage: 'CONFIRMED'
+  }
+];
+
+const INITIAL_WORKERS = [
+  {
+    id: 'wk-201',
+    type: 'TEAM',
+    name: '번개 판넬시공팀 (김기공 외 2인)',
+    teamLeader: '김태호 팀장',
+    memberCount: 3,
+    allMembersConsented: true,
+    regionGroup: '경기 남부',
+    availableDate: '즉시 투입 가능 (당일/장기/전국출장)',
+    tripAvailable: true,
+    composition: '기공 2명 + 조공 1명 (3인 1조)',
+    careerYears: 14,
+    specialties: ['GW', 'URETHANE', 'ZINC', 'AL'],
+    equipmentList: ['충전 임팩/원형톱 풀세트', '레이저 레벨기 2대', '판넬 흡착기(윈도우 리프터)', '1톤 탑차 보유'],
+    wageType: '일당기준',
+    desiredMasterWage: 300000,
+    desiredHelperWage: 200000,
+    badges: {
+      safetyEduCompleted: true,
+      safetyEduDate: '2025-04-12 (건설업 기초안전보건교육 4시간)',
+      skillCertVerified: true,
+      bizVerified: true
+    },
+    safetyScore: 96.5,
+    helmetLikes: 42,
+    portfolioSummary: '평택·이천·용인 대형 물류센터 그라스울(GW) 종/횡판넬 및 냉동창고 우레탄 시공 120건 이상 무사고 완수'
+  },
+  {
+    id: 'wk-202',
+    type: 'TEAM',
+    name: '백두산 2인1조 기공·조공 호흡팀',
+    teamLeader: '최동훈 기공',
+    memberCount: 2,
+    allMembersConsented: true,
+    regionGroup: '충남/세종',
+    availableDate: '2026-11-04 이후 가능',
+    tripAvailable: true,
+    composition: '기공 1명 + 조공 1명 (2인 1조)',
+    careerYears: 9,
+    specialties: ['EPS', 'GW', 'LOUVER'],
+    equipmentList: ['유무선 판넬 컷팅기', '철재 절곡 가위/클램프', '안전그네·2중 안전고리 전원 보유'],
+    wageType: '일당기준',
+    desiredMasterWage: 290000,
+    desiredHelperWage: 190000,
+    badges: {
+      safetyEduCompleted: true,
+      safetyEduDate: '2024-11-08 (건설업 기초안전보건교육)',
+      skillCertVerified: true,
+      bizVerified: false
+    },
+    safetyScore: 88.4,
+    helmetLikes: 23,
+    portfolioSummary: '공장 신축 및 리모델링 EPS·GW 외벽 및 지붕 루바 판넬 정밀 시공 전문'
+  },
+  {
+    id: 'wk-203',
+    type: 'INDIVIDUAL',
+    name: '정성훈 (징크·후레싱 마감 전문 기공)',
+    memberCount: 1,
+    allMembersConsented: true,
+    regionGroup: '서울',
+    availableDate: '상시 조율 가능 (수도권 당일)',
+    tripAvailable: false,
+    composition: '기공 1인 단독',
+    careerYears: 18,
+    specialties: ['ZINC', 'AL', 'LOUVER'],
+    equipmentList: ['징크 전용 절곡·롤포밍 수공구 일체', '레이저 레벨기'],
+    wageType: '일당기준',
+    desiredMasterWage: 330000,
+    desiredHelperWage: 0,
+    badges: {
+      safetyEduCompleted: true,
+      safetyEduDate: '2023-09-19 (건설업 기초안전보건교육)',
+      skillCertVerified: true,
+      bizVerified: true
+    },
+    safetyScore: 95.2,
+    helmetLikes: 31,
+    portfolioSummary: '사옥·상가 건물 징크/알루미늄 복합판넬 코너 후레싱 및 방수 마감 특화'
+  }
+];
+
+const INITIAL_SUPPLIERS = [
+  {
+    id: 'sup-301',
+    orgName: '경기그린판넬공장 직영센터',
+    bizRegNumber: '135-81-49201',
+    bizVerifiedStatus: 'APPROVED',
+    category: 'PANEL',
+    condition: '신품',
+    tradeStatus: '판매중',
+    title: '준불연 그라스울(GW) 100T / EPS 50T~150T 공장도가 당일 출고',
+    regionGroup: '경기 남부',
+    priceText: '회배(㎡)당 24,500원~ (규격별 상이)',
+    specDetail: '밀도 48K/64K 성적서 완비, 5톤/추레라 현장 직송 배차 지원',
+    helmetLikes: 54,
+    contactMasked: '031-****-8800'
+  },
+  {
+    id: 'sup-302',
+    orgName: '번개스카이 & 크레인 배차본부',
+    bizRegNumber: '214-86-99102',
+    bizVerifiedStatus: 'APPROVED',
+    category: 'SKY_CRANE',
+    condition: '배차대여',
+    tradeStatus: '대여가능',
+    title: '3.5톤 / 5톤 스카이차 (작업높이 28m~45m) 판넬 전용 윈치 장착',
+    regionGroup: '전국 전체',
+    priceText: '일대 550,000원 (오전 반나절 가능)',
+    specDetail: '풍속계 기본 탑재, 비파괴검사 및 보험 완비, 베테랑 기사 배차',
+    helmetLikes: 39,
+    contactMasked: '1588-****'
+  },
+  {
+    id: 'sup-303',
+    orgName: '정밀절곡 후레싱·부자재 마트',
+    bizRegNumber: '312-88-11045',
+    bizVerifiedStatus: 'APPROVED',
+    category: 'FLASHING_SCREW',
+    condition: '신품',
+    tradeStatus: '판매중',
+    title: '물받이·코너·창문 후레싱 도면 당일 절곡 + 판넬 직결피스 대량할인',
+    regionGroup: '충남/세종',
+    priceText: '자당 1,800원~ / 피스 박스당 도매가',
+    specDetail: '컬러강판 전 색상 보유, 현장 도면 사진 전송 시 2시간 내 절곡 출고',
+    helmetLikes: 27,
+    contactMasked: '041-****-3312'
+  },
+  {
+    id: 'sup-304',
+    orgName: '화성산단 잔여판넬 직거래팀 (심사중 예시)',
+    bizRegNumber: '129-42-88120',
+    bizVerifiedStatus: 'DRAFT_PENDING',
+    category: 'PANEL',
+    condition: '잔여자재',
+    tradeStatus: '예약중',
+    title: '[사업자 검수 대기 초안] 우레탄 100T 미사용 잔여 판넬 45장 일괄',
+    regionGroup: '경기 남부',
+    priceText: '장당 35,000원',
+    specDetail: '사업자등록증 심사 완료 전에는 일반 피드에 공개되지 않으며 인증 배지가 차단됩니다.',
+    helmetLikes: 0,
+    contactMasked: '010-****-0000'
+  }
+];
+
+const INITIAL_LEDGER = [
+  {
+    id: 'ev-01',
+    createdAt: '2026-09-01 09:00',
+    category: 'SAFETY',
+    eventType: 'INITIAL_BASE_80',
+    delta: 80.0,
+    balanceAfter: 80.0,
+    reason: '[1. 기본 시작 점수] 신규 가입 기본 안전지수 80.0점 부여 (🟡 보통 등급 시작)',
+    status: 'APPLIED'
+  },
+  {
+    id: 'ev-02',
+    createdAt: '2026-09-05 14:10',
+    category: 'SAFETY',
+    eventType: 'DOC_CERT_BONUS_MAX7',
+    delta: 7.0,
+    balanceAfter: 87.0,
+    reason: '[2. 서류 인증 가점 +7.0] 기초안전교육(+3.0) + 건강검진(+2.0) + 사업자확인(+2.0) 완비',
+    status: 'APPLIED'
+  },
+  {
+    id: 'ev-03',
+    createdAt: '2026-09-18 08:30',
+    category: 'TRUST',
+    eventType: 'POST_REGISTER_AND_CONFIRM',
+    delta: 0.5,
+    balanceAfter: 87.5,
+    reason: '[3. 건별 활동 누적] 공고/프로필 성실 등록(+0.2점) + 상호 체결 확정(+0.3점)',
+    status: 'APPLIED'
+  },
+  {
+    id: 'ev-04',
+    createdAt: '2026-09-20 18:05',
+    category: 'TRUST',
+    eventType: 'WORK_PAID_AND_STAR_5',
+    delta: 2.0,
+    balanceAfter: 89.5,
+    reason: '[3. 건별 활동 누적] 작업 완료 & 당일 정산 확인(+1.0점) + 상호 별점 평가 5점 만점(+1.0점)',
+    status: 'APPLIED'
+  },
+  {
+    id: 'ev-05',
+    createdAt: '2026-10-12 19:00',
+    category: 'TRUST',
+    eventType: 'REMATCH_BONUS_AND_CYCLE',
+    delta: 6.0,
+    balanceAfter: 95.5,
+    reason: '[3. 건별 활동 누적] 평택·이천 현장 재매칭 보너스(+2.0점×2회) 및 정산·별점 누적(+2.0점)',
+    status: 'APPLIED'
+  },
+  {
+    id: 'ev-06',
+    createdAt: '2026-10-25 08:15',
+    category: 'SAFETY',
+    eventType: 'WEATHER_CANCEL_HOLD',
+    delta: 0.0,
+    balanceAfter: 95.5,
+    reason: '[4. 리스크 차감 보류] 천안 현장 강풍(15.6m/s) 기상악화 취소 (무단 노쇼 -15.0점 감점 자동 보류 0.0점)',
+    status: 'HELD_WEATHER'
+  }
+];
+
+// ==========================================
+// 3. 유틸리티 헬퍼 (Helpers)
+// ==========================================
+function getSafetyGrade(score) {
+  if (score >= 95) {
+    return { label: '👑 명장', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40', ring: 'text-emerald-400' };
+  }
+  if (score >= 85) {
+    return { label: '🛡️ 안전 베테랑', color: 'bg-teal-500/20 text-teal-300 border-teal-500/40', ring: 'text-teal-400' };
+  }
+  if (score >= 75) {
+    return { label: '🟡 보통', color: 'bg-amber-500/20 text-amber-300 border-amber-500/40', ring: 'text-amber-400' };
+  }
+  if (score >= 65) {
+    return { label: '🔴 주의 필요', color: 'bg-rose-500/20 text-rose-300 border-rose-500/40', ring: 'text-rose-400' };
+  }
+  return { label: '⛔ 임시 제한 (구제 심사 대상)', color: 'bg-red-900/50 text-red-200 border-red-500', ring: 'text-red-400' };
+}
+
+function formatKRW(amount) {
+  return Number(amount || 0).toLocaleString('ko-KR') + '원';
+}
+
+// ==========================================
+// 4. 메인 애플리케이션 컴포넌트 (Main App)
+// ==========================================
+function App() {
+  // 온보딩 및 세션 상태
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
+  const [isLoggedIn, setIsLoggedIn] = useState(true);
+  const [pendingReturnJobId, setPendingReturnJobId] = useState(null);
+
+  // 멀티 롤 & 관리자 분리 상태
+  const [activeRole, setActiveRole] = useState('manager');
+  const [verifiedRoles, setVerifiedRoles] = useState(['manager', 'worker', 'supplier']);
+  const [isAdminSession, setIsAdminSession] = useState(false);
+  const [adminSubRole, setAdminSubRole] = useState('SUPER_ADMIN');
+
+  // 하단 네비게이션 탭 & 지역/필터 상태
+  const [activeTab, setActiveTab] = useState('home');
+  const [selectedRegion, setSelectedRegion] = useState('전국 전체');
+  const [isGpsLoading, setIsGpsLoading] = useState(false);
+  const [selectedPanelFilter, setSelectedPanelFilter] = useState('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // 데이터 상태
+  const [jobs, setJobs] = useState(INITIAL_JOBS);
+  const [workers, setWorkers] = useState(INITIAL_WORKERS);
+  const [suppliers, setSuppliers] = useState(INITIAL_SUPPLIERS);
+  const [scoreLedger, setScoreLedger] = useState(INITIAL_LEDGER);
+  const [mySafetyScore, setMySafetyScore] = useState(95.5);
+
+  // 그린 안전모(⛑️) 관심 목록 (중복 방지 객체 구조)
+  const [likedJobIds, setLikedJobIds] = useState({ 'job-101': true });
+  const [likedWorkerIds, setLikedWorkerIds] = useState({ 'wk-201': true });
+  const [likedSupplierIds, setLikedSupplierIds] = useState({});
+
+  // 차단한 사용자/공고 목록
+  const [blockedTargetIds, setBlockedTargetIds] = useState({});
+
+  // 상세 모달 및 기능 모달 상태
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [showJobCreateModal, setShowJobCreateModal] = useState(false);
+  const [showWorkerCreateModal, setShowWorkerCreateModal] = useState(false);
+  const [showSupplierCreateModal, setShowSupplierCreateModal] = useState(false);
+
+  // Just-in-Time 동의 및 안심번호/채팅 상태
+  const [jitConsentModal, setJitConsentModal] = useState({
+    open: false,
+    purpose: 'APPLY_JOB',
+    targetJob: null
+  });
+  const [jitAgreedItems, setJitAgreedItems] = useState({
+    collection: true,
+    thirdParty: true,
+    nightPushOptIn: false
+  });
+
+  // 합의된 공고 ID별 연락처 마스킹 해제 상태 (contact_grants)
+  const [unlockedContactJobIds, setUnlockedContactJobIds] = useState({});
+
+  // 기상악화 취소소명 / 이의제기(Appeal) 모달
+  const [weatherCancelModalJob, setWeatherCancelModalJob] = useState(null);
+  const [weatherCancelReason, setWeatherCancelReason] = useState('현장 체감 돌풍 및 타워크레인/스카이 작업 중지 권고로 인한 안전 취소 요청');
+  const [showAppealModal, setShowAppealModal] = useState(false);
+  const [appealText, setAppealText] = useState('');
+
+  // 야간 방해금지 (20:00~08:00 기본값 ON) 및 탈퇴 모달
+  const [nightDndEnabled, setNightDndEnabled] = useState(true);
+  const [marketingConsent, setMarketingConsent] = useState(false);
+  const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
+  const [showArchitectureDrawer, setShowArchitectureDrawer] = useState(false);
+
+  // 회원가입 대한민국 법적 필수 동의 항목 (분쟁 예방 6대 필수 + 마케팅 선택 분리)
+  const [signupAgreements, setSignupAgreements] = useState({
+    adult18: true,         // [필수] 만 18세 이상 성인 확인 (근로기준법 제65조 연소자 유해·위험작업 금지)
+    serviceTerms: true,    // [필수] 서비스 이용약관 및 중개 면책 동의 (직업안정법·전자상거래법 — 고용계약·임금체불 비당사자)
+    privacyPolicy: true,   // [필수] 개인정보 처리방침 (수집·이용 필수 동의 — 개인정보보호법)
+    locationTerms: true,   // [필수] 위치기반서비스 이용약관 동의 (위치정보법 — GPS 17대 권역 매칭)
+    safetyLiability: true, // [필수] 현장 안전관리·산재보험 책임 분리 및 운영정책 동의 (산업안전보건법)
+    youthProtection: true, // [필수] 청소년 보호정책 준수 동의 (청소년보호법)
+    marketingOptIn: false  // [선택] 마케팅 정보 및 혜택 알림 수신 동의 (정보통신망법 — 미동의 시에도 가입 가능)
+  });
+
+  // 마이페이지 신규 4대 항목 모달/뷰 상태 (내 계정, 공지사항, 고객센터 AI 1:1 대화방, 약관 및 정책)
+  const [activeMyPageModal, setActiveMyPageModal] = useState('NONE');
+  const [selectedPolicyTab, setSelectedPolicyTab] = useState('SERVICE');
+  const [myAccountInfo, setMyAccountInfo] = useState({
+    email: 'panel_master@kakao.com',
+    phone: '010-8912-4821 (통신사 PASS 본인인증 완료)',
+    country: '대한민국 (South Korea, +82)',
+    address: '경기도 성남시 분당구 판교역로 235 (경기 남부 권역)',
+    identityVerified: 'PASS 실명·성인(만 18세 이상) 본인인증 완료 (2026-09-01)',
+    loginProvider: '카카오 1초 간편로그인 (Rotating Refresh Token · HttpOnly 보안 쿠키)',
+    lastLoginLog: '2026-11-03 13:05 KST · IP 211.34.***.88 (정상 로그인 기록)'
+  });
+  const [aiChatMessages, setAiChatMessages] = useState([
+    {
+      id: 'msg-1',
+      sender: 'AI',
+      text: '안녕하세요! 판넬오더 AI 1:1 고객센터입니다. 공고 등록, 기상악화 노쇼 감점 보류 신청, 자재·장비 사업자 심사(2~3일 소요), 임금·취소보상 약정 등 궁금하신 점을 선택하거나 입력해 주세요.',
+      time: '13:05'
+    }
+  ]);
+  const [aiChatInput, setAiChatInput] = useState('');
+
+  // 토스트 알림 메시지
+  const [toastMessage, setToastMessage] = useState(null);
+
+  const [selectedStarRating, setSelectedStarRating] = useState(5);
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+  };
+
+  // 판넬오더 V2.1 안전지수 자동 산출 공식 원장(score_events) 기록 헬퍼
+  const recordSafetyScoreEvent = (params) => {
+    setMySafetyScore(prevScore => {
+      const nextScore = Math.min(100.0, Math.max(0.0, Number((prevScore + params.delta).toFixed(1))));
+      const newEv = {
+        id: `ev-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        createdAt: '2026-11-03 실시간',
+        category: params.category,
+        eventType: params.eventType,
+        delta: params.delta,
+        balanceAfter: nextScore,
+        reason: params.reason,
+        status: params.status || 'APPLIED'
+      };
+      setScoreLedger(prev => [newEv, ...prev]);
+      return nextScore;
+    });
+  };
+
+  useEffect(() => {
+    if (!toastMessage) return;
+    const timer = setTimeout(() => setToastMessage(null), 3200);
+    return () => clearTimeout(timer);
+  }, [toastMessage]);
+
+  // 공고 등록 폼 상태
+  const [newJobForm, setNewJobForm] = useState({
+    title: '',
+    regionGroup: '경기 남부',
+    regionDetail: '화성시 동탄면',
+    panelKind: 'GW',
+    healthCheckRequired: true,
+    safetyEduRequired: true,
+    sitePhotoName: '현장_전경_실사진_01.jpg (EXIF 위치정보 자동제거 대기)',
+    teamUnit: 'PAIR_2',
+    wageMode: 'INDIVIDUAL',
+    masterWage: 300000,
+    helperWage: 200000,
+    workDate: '2026-11-06',
+    workHours: '07:00 ~ 17:00',
+    payerEntity: '(주)세이프티판넬건설',
+    payTiming: '당일 18시 직불',
+    cancelCompensation: true,
+    cancelCompensationAmount: 100000,
+    gateMemo: '남문 1번 게이트 신호수 확인 후 진입',
+    address: '경기도 화성시 동탄산단로 88'
+  });
+
+  // 기술자 등록 폼 상태
+  const [newWorkerForm, setNewWorkerForm] = useState({
+    type: 'TEAM',
+    name: '',
+    regionGroup: '경기 남부',
+    composition: '기공 1명 + 조공 1명 (2인 1조)',
+    careerYears: 10,
+    safetyEduCompleted: true,
+    isBusinessEntity: false,
+    desiredMasterWage: 300000,
+    desiredHelperWage: 200000,
+    allMembersConsented: true
+  });
+
+  // 업체 홍보 등록 폼 상태
+  const [newSupplierForm, setNewSupplierForm] = useState({
+    orgName: '',
+    bizRegNumber: '134-86-01928',
+    photoName: '자재_스카이장비_실사진_01.jpg (EXIF 제거됨)',
+    adminPreApproved: false,
+    category: 'PANEL',
+    title: '',
+    regionGroup: '경기 남부',
+    priceText: '회배당 25,000원',
+    specDetail: '준불연 성적서 보유, 당일 배차 가능'
+  });
+
+  // ==========================================
+  // 5. 핵심 액션 핸들러 (Core Handlers)
+  // ==========================================
+
+  // GPS 현위치 1초 자동 설정 시뮬레이션
+  const handleGpsAutoDetect = () => {
+    setIsGpsLoading(true);
+    setTimeout(() => {
+      setIsGpsLoading(false);
+      setSelectedRegion('경기 남부');
+      showToast('📍 GPS 현위치 기반 [경기 남부 (성남/평택/이천)] 권역으로 자동 설정되었습니다.');
+    }, 600);
+  };
+
+  // 그린 안전모(⛑️) 찜 토글 (UNIQUE 제약 반영)
+  const toggleJobHelmetLike = (jobId, e) => {
+    if (e) e.stopPropagation();
+    const currentlyLiked = !!likedJobIds[jobId];
+    setLikedJobIds(prev => ({ ...prev, [jobId]: !currentlyLiked }));
+    setJobs(prev =>
+      prev.map(j =>
+        j.id === jobId
+          ? { ...j, helmetLikes: currentlyLiked ? Math.max(0, j.helmetLikes - 1) : j.helmetLikes + 1 }
+          : j
+      )
+    );
+    if (selectedJob && selectedJob.id === jobId) {
+      setSelectedJob(prev =>
+        prev
+          ? { ...prev, helmetLikes: currentlyLiked ? Math.max(0, prev.helmetLikes - 1) : prev.helmetLikes + 1 }
+          : null
+      );
+    }
+    showToast(!currentlyLiked ? '⛑️ 그린 안전모 관심 현장에 추가되었습니다.' : '관심 현장에서 해제되었습니다.');
+  };
+
+  const toggleWorkerHelmetLike = (workerId) => {
+    const currentlyLiked = !!likedWorkerIds[workerId];
+    setLikedWorkerIds(prev => ({ ...prev, [workerId]: !currentlyLiked }));
+    setWorkers(prev =>
+      prev.map(w =>
+        w.id === workerId
+          ? { ...w, helmetLikes: currentlyLiked ? Math.max(0, w.helmetLikes - 1) : w.helmetLikes + 1 }
+          : w
+      )
+    );
+    showToast(!currentlyLiked ? '⛑️ 관심 시공팀으로 등록되었습니다.' : '관심 시공팀에서 해제되었습니다.');
+  };
+
+  // 클립보드 복사 및 길찾기 폴백
+  const handleCopyAddress = (address) => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(address);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = address;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      showToast(`📋 현장 주소가 복사되었습니다: ${address}`);
+    } catch {
+      showToast(`📋 주소 복사 완료: ${address}`);
+    }
+  };
+
+  // AI 1:1 고객센터 대화방 메시지 전송 핸들러
+  const handleSendAiCsMessage = (customQuestion) => {
+    const q = (customQuestion !== undefined ? customQuestion : aiChatInput).trim();
+    if (!q) return;
+    const userMsg = { id: `u-${Date.now()}`, sender: 'USER', text: q, time: '방금' };
+    let replyText =
+      '문의하신 내용이 접수되었습니다. 판넬오더 운영정책 및 직업안정법 기준에 따라 신속히 안내해 드리겠습니다.';
+    if (q.includes('강풍') || q.includes('기상') || q.includes('노쇼')) {
+      replyText =
+        '🌤️ [기상악화 노쇼 감점 보류 안내] 안전보건규칙 제37조에 따라 풍속 10m/s 초과(주의) 또는 15m/s 초과(작업중지 검토) 등 천재지변 취소 요청 시 기상청 격자 스냅샷이 자동 보존되며 노쇼(-15.0점) 감점이 즉시 보류(HELD_WEATHER)됩니다.';
+    } else if (q.includes('심사') || q.includes('자재') || q.includes('승인')) {
+      replyText =
+        '🏗️ [자재·장비 업체 심사 안내] 사업자등록증 제출 후 관리자 검수까지 2~3일이 소요됩니다. 상태 흐름은 [심사 대기(일반 피드 비노출) ➔ 승인 완료(공식 인증 배지·정식 공개) / 반려(사유 안내)]로 진행됩니다.';
+    } else if (q.includes('단가') || q.includes('취소보상')) {
+      replyText =
+        '💵 [단가 협의 및 취소보상 안내] 소장님 공고 등록 시 모집 단위에서 [단가 협의]를 선택하시면 일당 입력란이 자동 숨김 처리됩니다. 현장 귀책 취소보상금은 고용주가 직접 금액을 측정해 약정하며 플랫폼이 대납·보증하지 않습니다.';
+    } else if (q.includes('본인인증') || q.includes('계정') || q.includes('약관')) {
+      replyText =
+        '🔐 [내 계정 및 약관 안내] 마이페이지 > [내 계정]에서 이메일·휴대전화·국가·주소·본인인증 및 로그인 기반 기록을 확인하실 수 있으며, [약관 및 정책]에서 6대 법정 필수 약관 전문을 열람하실 수 있습니다.';
+    }
+    const aiMsg = { id: `a-${Date.now() + 1}`, sender: 'AI', text: replyText, time: '방금' };
+    setAiChatMessages(prev => [...prev, userMsg, aiMsg]);
+    if (customQuestion === undefined) setAiChatInput('');
+  };
+
+  // 구인구직 라이프사이클 단계 진행
+  const advanceJobLifecycle = (jobId) => {
+    const order = ['APPLIED', 'OFFERED', 'CONFIRMED', 'COMPLETED_PAID', 'REVIEWED'];
+    setJobs(prev =>
+      prev.map(j => {
+        if (j.id !== jobId) return j;
+        const idx = order.indexOf(j.lifecycleStage);
+        const nextStage = order[Math.min(order.length - 1, idx + 1)];
+        return { ...j, lifecycleStage: nextStage };
+      })
+    );
+    if (selectedJob && selectedJob.id === jobId) {
+      const idx = order.indexOf(selectedJob.lifecycleStage);
+      const nextStage = order[Math.min(order.length - 1, idx + 1)];
+      setSelectedJob({ ...selectedJob, lifecycleStage: nextStage });
+      if (nextStage === 'CONFIRMED') {
+        setUnlockedContactJobIds(prev => ({ ...prev, [jobId]: true }));
+        recordSafetyScoreEvent({
+          category: 'TRUST',
+          eventType: 'MUTUAL_CONFIRMED',
+          delta: 0.3,
+          reason: `[상호 체결 확정 +0.3점] ${selectedJob.title} (terms_snapshots 불변 사본 생성)`
+        });
+        showToast('🤝 상호 체결 확정(+0.3점 자동 가산)! 불변 사본(terms_snapshots)이 생성되고 안심번호가 열렸습니다.');
+      } else if (nextStage === 'COMPLETED_PAID') {
+        recordSafetyScoreEvent({
+          category: 'TRUST',
+          eventType: 'WORK_COMPLETED_PAID',
+          delta: 1.0,
+          reason: `[작업 완료 & 당일 정산 확인 +1.0점] ${selectedJob.title}`
+        });
+        showToast('💵 작업 완료 & 당일 정산 확인(+1.0점 자동 가산)이 score_events 원장에 기록되었습니다.');
+      } else if (nextStage === 'REVIEWED') {
+        const starDeltaMap = { 5: 1.0, 4: 0.5, 3: 0.0, 2: -0.5, 1: -1.0 };
+        const starDelta = starDeltaMap[selectedStarRating] !== undefined ? starDeltaMap[selectedStarRating] : 1.0;
+        recordSafetyScoreEvent({
+          category: 'TRUST',
+          eventType: `STAR_RATING_${selectedStarRating}`,
+          delta: starDelta,
+          reason: `[상호 별점 평가 ${selectedStarRating}점 (${starDelta >= 0 ? '+' : ''}${starDelta.toFixed(1)}점)] ${selectedJob.title}`
+        });
+        showToast(`⭐ 상호 별점 ${selectedStarRating}점 평가 완료(${starDelta >= 0 ? '+' : ''}${starDelta.toFixed(1)}점 자동 반영)!`);
+      } else {
+        showToast('✅ 진행 단계가 업데이트되었습니다.');
+      }
+    }
+  };
+
+  // Just-in-Time 동의 완료 처리
+  const handleConfirmJitConsent = () => {
+    if (!jitAgreedItems.collection || !jitAgreedItems.thirdParty) {
+      showToast('⚠️ 필수 동의 항목(개인정보 수집 및 거래 상대방 제공)에 체크해 주세요.');
+      return;
+    }
+    const target = jitConsentModal.targetJob;
+    if (target) {
+      setUnlockedContactJobIds(prev => ({ ...prev, [target.id]: true }));
+      if (jitConsentModal.purpose === 'APPLY_JOB') {
+        showToast('✅ 실시간(Just-in-Time) 동의 영수증이 발급되었으며 지원서가 제출되었습니다.');
+      } else {
+        showToast('📞 1:1 조건 합의 및 안심번호(050) 매핑이 활성화되어 연락처 마스킹이 해제되었습니다.');
+      }
+    }
+    setJitConsentModal({ open: false, purpose: 'APPLY_JOB', targetJob: null });
+  };
+
+  // 악성 이용자 차단 처리
+  const handleBlockTarget = (targetId, label) => {
+    setBlockedTargetIds(prev => ({ ...prev, [targetId]: true }));
+    setSelectedJob(null);
+    showToast(`🚫 [${label}] 차단 완료: API 단에서 새 채팅·안심번호 발급·알림이 원천 차단되었습니다. (기존 분쟁 증빙은 보존)`);
+  };
+
+  // 기상악화 취소 요청 처리 (노쇼 -15점 감점 보류)
+  const handleSubmitWeatherCancel = () => {
+    if (!weatherCancelModalJob) return;
+    const newEvent = {
+      id: `ev-${Date.now()}`,
+      createdAt: '2026-11-02 11:00',
+      category: 'SAFETY',
+      eventType: 'WEATHER_CANCEL_HOLD',
+      delta: 0.0,
+      balanceAfter: mySafetyScore,
+      reason: `[기상악화 소명 접수] ${weatherCancelModalJob.title} - 풍속 ${weatherCancelModalJob.weather.windSpeedMs}m/s 관측 스냅샷 보존 (노쇼 -15.0점 자동 감점 보류)`,
+      status: 'HELD_WEATHER'
+    };
+    setScoreLedger(prev => [newEvent, ...prev]);
+    setWeatherCancelModalJob(null);
+    showToast('🌤️ 기상청 스냅샷과 현장 취소 사유가 보존되었습니다. 노쇼(-15.0점) 감점이 자동 보류됩니다.');
+  };
+
+  // 신규 현장 공고 등록
+  const handleCreateJob = (e) => {
+    e.preventDefault();
+    if (!newJobForm.title.trim()) {
+      showToast('⚠️ 현장 공고 제목을 입력해 주세요.');
+      return;
+    }
+    const isNegotiable = newJobForm.teamUnit === 'NEGOTIABLE';
+    const totalWage = isNegotiable
+      ? 0
+      : newJobForm.teamUnit === 'SINGLE_MASTER'
+      ? Number(newJobForm.masterWage)
+      : newJobForm.teamUnit === 'PAIR_2'
+      ? Number(newJobForm.masterWage) + Number(newJobForm.helperWage)
+      : Number(newJobForm.masterWage) * 2 + Number(newJobForm.helperWage);
+
+    const compAmt = newJobForm.cancelCompensation ? Number(newJobForm.cancelCompensationAmount) : 0;
+
+    const created = {
+      id: `job-${Date.now()}`,
+      title: newJobForm.title,
+      regionGroup: newJobForm.regionGroup,
+      regionDetail: newJobForm.regionDetail,
+      panelKind: newJobForm.panelKind,
+      healthCheckRequired: newJobForm.healthCheckRequired,
+      safetyEduRequired: newJobForm.safetyEduRequired,
+      fireCertStatus: 'NONE',
+      sitePhotoPreview: newJobForm.sitePhotoName,
+      teamUnit: newJobForm.teamUnit,
+      wageMode: newJobForm.wageMode,
+      masterWage: isNegotiable ? 0 : Number(newJobForm.masterWage),
+      helperWage: isNegotiable ? 0 : Number(newJobForm.helperWage),
+      teamTotalWage: totalWage,
+      workHours: newJobForm.workHours,
+      breakHours: '12:00 ~ 13:00 (오전/오후 참 각 30분)',
+      overtimeRule: '연장 시 시간당 별도 협의 정산',
+      payerEntity: newJobForm.payerEntity,
+      payTiming: newJobForm.payTiming,
+      cancelCompensation: newJobForm.cancelCompensation,
+      cancelCompensationAmount: compAmt,
+      cancelCondition: `현장 귀책 당일 취소 시 ${compAmt.toLocaleString('ko-KR')}원 보상 (고용주 측정·직접 부담 약정, 플랫폼 보증 아님)`,
+      gateMemo: newJobForm.gateMemo,
+      address: newJobForm.address,
+      workDate: newJobForm.workDate,
+      slotsTotal: 2,
+      slotsFilled: 0,
+      helmetLikes: 1,
+      managerName: '나소장 (내 계정)',
+      managerOrg: newJobForm.payerEntity,
+      managerPhoneMasked: '010-****-1234',
+      managerPhoneReal: '010-9988-1234',
+      managerSafetyScore: mySafetyScore,
+      industrialAccident3Y: false,
+      weather: {
+        gridNx: 61,
+        gridNy: 120,
+        stationName: `${newJobForm.regionGroup} 격자(61,120)`,
+        dataType: '단기예보',
+        announcedAt: '2026-11-02 08:00',
+        targetAt: `${newJobForm.workDate} 09:00`,
+        queriedAt: '2026-11-02 11:00',
+        tempC: 13.0,
+        rainMm: 0,
+        windSpeedMs: 6.2,
+        windType: '예보풍속',
+        hasGustData: false,
+        isValid: true,
+        ruleVersion: '안전보건규칙 제37조 (2026.06 기준표 v2.1)'
+      },
+      svgTheme: 'emerald',
+      lifecycleStage: 'APPLIED'
+    };
+
+    setJobs(prev => [created, ...prev]);
+    setShowJobCreateModal(false);
+    setNewJobForm({ ...newJobForm, title: '' });
+    recordSafetyScoreEvent({
+      category: 'TRUST',
+      eventType: 'JOB_POST_REGISTERED',
+      delta: 0.2,
+      reason: `[공고 성실 등록 +0.2점] ${created.title}`
+    });
+    showToast('⚡ 현장 공고 성실 등록(+0.2점 안전지수 자동 가산)! 사진의 GPS EXIF가 자동 삭제되었습니다.');
+  };
+
+  // 신규 기술자 등록
+  const handleCreateWorker = (e) => {
+    e.preventDefault();
+    if (!newWorkerForm.name.trim()) {
+      showToast('⚠️ 팀명 또는 기술자 성명을 입력해 주세요.');
+      return;
+    }
+    if (newWorkerForm.type === 'TEAM' && !newWorkerForm.allMembersConsented) {
+      showToast('⚠️ 팀 등록 시 모든 구성원(team_members)의 참여 동의가 필수입니다.');
+      return;
+    }
+    const created = {
+      id: `wk-${Date.now()}`,
+      type: newWorkerForm.type,
+      name: newWorkerForm.name,
+      teamLeader: '내 계정 대표',
+      memberCount: newWorkerForm.type === 'TEAM' ? 2 : 1,
+      allMembersConsented: newWorkerForm.allMembersConsented,
+      regionGroup: newWorkerForm.regionGroup,
+      availableDate: '즉시 투입 가능',
+      tripAvailable: true,
+      composition: newWorkerForm.composition,
+      careerYears: Number(newWorkerForm.careerYears),
+      specialties: ['GW', 'EPS', 'URETHANE'],
+      equipmentList: ['충전 임팩/원형톱 완비', '레이저 레벨기', '안전모·안전대 전원 보유'],
+      wageType: '일당기준',
+      desiredMasterWage: Number(newWorkerForm.desiredMasterWage),
+      desiredHelperWage: Number(newWorkerForm.desiredHelperWage),
+      badges: {
+        safetyEduCompleted: newWorkerForm.safetyEduCompleted,
+        safetyEduDate: newWorkerForm.safetyEduCompleted ? '2026-03-10 (기초안전보건교육 이수)' : undefined,
+        skillCertVerified: false,
+        bizVerified: newWorkerForm.isBusinessEntity
+      },
+      safetyScore: mySafetyScore,
+      helmetLikes: 1,
+      portfolioSummary: '현장 안전수칙 철저 준수 및 정밀 시공 보장'
+    };
+    setWorkers(prev => [created, ...prev]);
+    setShowWorkerCreateModal(false);
+    setNewWorkerForm({ ...newWorkerForm, name: '' });
+    const certBonus = (newWorkerForm.safetyEduCompleted ? 3.0 : 0.0) + (newWorkerForm.isBusinessEntity ? 2.0 : 0.0);
+    const totalWorkerDelta = Number((0.2 + certBonus).toFixed(1));
+    recordSafetyScoreEvent({
+      category: 'SAFETY',
+      eventType: 'WORKER_PROFILE_AND_CERT',
+      delta: totalWorkerDelta,
+      reason: `[프로필 성실 등록(+0.2)${newWorkerForm.safetyEduCompleted ? ' + 기초안전교육(+3.0)' : ''}${newWorkerForm.isBusinessEntity ? ' + 사업자확인(+2.0)' : ''}] ${created.name}`
+    });
+    showToast(`🦺 시공 프로필 등록 완료! 안전지수 +${totalWorkerDelta.toFixed(1)}점이 score_events 원장에 자동 합산되었습니다.`);
+  };
+
+  // 신규 자재/장비 등록
+  const handleCreateSupplier = (e) => {
+    e.preventDefault();
+    if (!newSupplierForm.orgName.trim() || !newSupplierForm.title.trim()) {
+      showToast('⚠️ 업체명과 홍보 제목을 모두 입력해 주세요.');
+      return;
+    }
+    const created = {
+      id: `sup-${Date.now()}`,
+      orgName: newSupplierForm.orgName,
+      bizRegNumber: newSupplierForm.bizRegNumber,
+      photoPreview: newSupplierForm.photoName,
+      bizVerifiedStatus: 'DRAFT_PENDING',
+      category: newSupplierForm.category,
+      condition: '신품',
+      tradeStatus: '예약중',
+      title: newSupplierForm.title,
+      regionGroup: newSupplierForm.regionGroup,
+      priceText: newSupplierForm.priceText,
+      specDetail: newSupplierForm.specDetail,
+      helmetLikes: 1,
+      contactMasked: ''
+    };
+    setSuppliers(prev => [created, ...prev]);
+    setShowSupplierCreateModal(false);
+    setNewSupplierForm({ ...newSupplierForm, orgName: '', title: '' });
+    showToast(
+      '🏗️ 자재·장비 홍보 게시물 등록 및 심사 요청이 접수되었습니다. (승인 요청 후 2~3일 소요, 관리자 심사 후 정식 공개)'
+    );
+  };
+
+  // 필터링된 목록 계산
+  const filteredJobs = useMemo(() => {
+    return jobs.filter(j => {
+      if (blockedTargetIds[j.id]) return false;
+      const matchRegion = selectedRegion === '전국 전체' || j.regionGroup === selectedRegion;
+      const matchPanel = selectedPanelFilter === 'ALL' || j.panelKind === selectedPanelFilter;
+      const matchQuery =
+        !searchQuery.trim() ||
+        j.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        j.regionDetail.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchRegion && matchPanel && matchQuery;
+    });
+  }, [jobs, blockedTargetIds, selectedRegion, selectedPanelFilter, searchQuery]);
+
+  const filteredWorkers = useMemo(() => {
+    return workers.filter(w => {
+      const matchRegion = selectedRegion === '전국 전체' || w.regionGroup === selectedRegion || w.tripAvailable;
+      const matchQuery =
+        !searchQuery.trim() ||
+        w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        w.portfolioSummary.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchRegion && matchQuery;
+    });
+  }, [workers, selectedRegion, searchQuery]);
+<!-- ... existing code ... -->
+                {/* 판넬 종류 7종 가로 스크롤 버튼 */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                  {Object.keys(PANEL_LABELS).map(pk => (
+                    <button
+                      key={pk}
+                      onClick={() => setSelectedPanelFilter(pk)}
+                      className={`shrink-0 min-h-[38px] px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
+                        selectedPanelFilter === pk
+                          ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow'
+                          : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      {PANEL_LABELS[pk]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+<!-- ... existing code ... -->
+                      {/* 상호 별점 평가 (5점 만점 기준 -1.0점 ~ +1.0점) */}
+                      <div className="grid grid-cols-5 gap-1 pt-1">
+                        {[
+                          { star: 5, delta: 1.0, label: '⭐5점(+1.0)' },
+                          { star: 4, delta: 0.5, label: '⭐4점(+0.5)' },
+                          { star: 3, delta: 0.0, label: '⭐3점(0.0)' },
+                          { star: 2, delta: -0.5, label: '⭐2점(-0.5)' },
+                          { star: 1, delta: -1.0, label: '⭐1점(-1.0)' }
+                        ].map(item => (
+                          <button
+                            key={item.star}
+                            type="button"
+                            onClick={() => {
+                              recordSafetyScoreEvent({
+                                category: 'TRUST',
+                                eventType: `STAR_EVAL_${item.star}`,
+                                delta: item.delta,
+                                reason: `[상호 별점 평가] ${item.star}점 (${item.delta >= 0 ? '+' : ''}${item.delta.toFixed(1)}점 반영)`
+                              });
+                              showToast(`⭐ 상호 별점 ${item.star}점 평가(${item.delta >= 0 ? '+' : ''}${item.delta.toFixed(1)}점)가 원장에 자동 계산되었습니다.`);
+                            }}
+                            className={`py-1 px-1 rounded border text-[10px] font-bold transition ${
+                              item.delta > 0
+                                ? 'bg-slate-900 border-emerald-500/30 text-emerald-300 hover:bg-slate-800'
+                                : item.delta === 0
+                                ? 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
+                                : 'bg-slate-900 border-rose-500/30 text-rose-300 hover:bg-slate-800'
+                            }`}
+                          >
+                            {item.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+<!-- ... existing code ... -->
+                {/* 6.2절 관리자 역할 3단계 분리 */}
+                <div className="flex gap-1.5 pt-1">
+                  {[
+                    { id: 'REVIEWER', label: '심사 담당' },
+                    { id: 'DISPUTE_MANAGER', label: '신고·분쟁 담당' },
+                    { id: 'SUPER_ADMIN', label: '최고 관리자' }
+                  ].map(role => (
+                    <button
+                      key={role.id}
+                      onClick={() => setAdminSubRole(role.id)}
+                      className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold border transition ${
+                        adminSubRole === role.id
+                          ? 'bg-amber-500 text-slate-950 border-amber-400'
+                          : 'bg-slate-900 text-slate-400 border-slate-800'
+                      }`}
+                    >
+                      {role.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+<!-- ... existing code ... -->
+        {/* ==========================================
+            당근마켓 스타일 4대 하단 네비게이션 탭 바 (2.4절)
+           ========================================== */}
+        <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] z-40 bg-slate-950/95 backdrop-blur border-t border-slate-800 px-2 py-1.5 flex items-center justify-around">
+          {[
+            { id: 'home', label: '홈(구인구직)', icon: Home },
+            { id: 'workers', label: '판넬시공', icon: HardHat },
+            { id: 'suppliers', label: '업체홍보', icon: Building2 },
+            { id: 'mypage', label: '마이페이지', icon: User }
+          ].map(tab => {
+            const IconComp = tab.icon;
+            const isSelected = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 min-h-[52px] rounded-xl flex flex-col items-center justify-center gap-1 transition ${
+                  isSelected ? 'text-emerald-400 font-extrabold' : 'text-slate-400 hover:text-slate-200 font-medium'
+                }`}
+              >
+                <IconComp className={`w-5 h-5 ${isSelected ? 'stroke-[2.5]' : 'stroke-2'}`} />
+                <span className="text-[11px]">{tab.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* ==========================================
+          MODAL 1: 공고 상세 + 기상청 격자 상세 + 구인구직 5단계 라이프사이클
+         ========================================== */}
+      {selectedJob && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="w-full max-w-[480px] max-h-[92vh] bg-slate-900 border border-slate-700 rounded-t-3xl sm:rounded-3xl overflow-y-auto p-5 space-y-4 shadow-2xl">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <span className="text-xs font-extrabold text-emerald-400">
+                  📍 {selectedJob.regionGroup} ({selectedJob.regionDetail}) · 작업일 {selectedJob.workDate}
+                </span>
+                <h2 className="text-base font-extrabold text-white mt-1">{selectedJob.title}</h2>
+              </div>
+              <button
+                onClick={() => setSelectedJob(null)}
+                className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* 5.1.4 전면 개편된 구인구직 5단계 라이프사이클 트래커 */}
+            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-3.5 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-extrabold text-emerald-400">
+                  🔄 구인구직 라이프사이클 & 불변 합의 기록(terms_snapshots)
+                </span>
+                <button
+                  onClick={() => advanceJobLifecycle(selectedJob.id)}
+                  className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-emerald-500 text-slate-950 hover:bg-emerald-400"
+                >
+                  다음 단계 진행 ➔
+                </button>
+              </div>
+              <div className="grid grid-cols-5 gap-1 text-[10px] text-center font-bold">
+                {[
+                  { id: 'APPLIED', label: '1.지원제출' },
+                  { id: 'OFFERED', label: '2.조건제안' },
+                  { id: 'CONFIRMED', label: '3.확정(+0.3)' },
+                  { id: 'COMPLETED_PAID', label: '4.정산(+1.0)' },
+                  { id: 'REVIEWED', label: '5.별점평가' }
+                ].map(st => {
+                  const active = selectedJob.lifecycleStage === st.id;
+                  return (
+                    <div
+                      key={st.id}
+                      className={`py-1.5 px-1 rounded-lg border ${
+                        active
+                          ? 'bg-emerald-500 text-slate-950 border-emerald-300 font-extrabold'
+                          : 'bg-slate-900 text-slate-400 border-slate-800'
+                      }`}
+                    >
+                      {st.label}
+                    </div>
+                  );
+                })}
+              </div>
+<!-- ... existing code ... -->
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">판넬 종류 (7종)</label>
+                  <select
+                    value={newJobForm.panelKind}
+                    onChange={e =>
+                      setNewJobForm({ ...newJobForm, panelKind: e.target.value })
+                    }
+                    className="w-full min-h-[44px] bg-slate-950 border border-slate-800 rounded-xl px-2.5 text-slate-100"
+                  >
+                    {Object.keys(PANEL_LABELS)
+                      .filter(k => k !== 'ALL')
+                      .map(k => (
+                        <option key={k} value={k}>
+                          {PANEL_LABELS[k]}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+<!-- ... existing code ... -->
+              {/* 3. 모집 단위 필수 선택 ('단가 협의' 목록 추가) */}
+              <div>
+                <label className="block font-bold text-slate-300 mb-1">모집 단위 필수 선택 (단가 협의 포함)</label>
+                <select
+                  value={newJobForm.teamUnit}
+                  onChange={e => setNewJobForm({ ...newJobForm, teamUnit: e.target.value })}
+                  className="w-full min-h-[44px] bg-slate-950 border border-slate-800 rounded-xl px-3 text-slate-100"
+                >
+                  {Object.keys(TEAM_UNIT_LABELS).map(tu => (
+                    <option key={tu} value={tu}>
+                      {TEAM_UNIT_LABELS[tu]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+<!-- ... existing code ... -->
+            <div className="space-y-3">
+              <div>
+                <label className="block font-bold text-slate-300 mb-1">활동 단위 구분 (개인 / 시공팀)</label>
+                <select
+                  value={newWorkerForm.type}
+                  onChange={e => setNewWorkerForm({ ...newWorkerForm, type: e.target.value })}
+                  className="w-full min-h-[42px] bg-slate-950 border border-slate-800 rounded-xl px-3 text-white"
+                >
+                  <option value="TEAM">시공팀 (2인 1조 이상)</option>
+                  <option value="INDIVIDUAL">개인 기술자 (기공/조공 단독)</option>
+                </select>
+              </div>
+<!-- ... existing code ... -->
+            <div className="flex flex-wrap gap-1.5 py-2.5 border-b border-slate-800">
+              {[
+                { id: 'SERVICE', label: '서비스 이용약관' },
+                { id: 'PRIVACY', label: '개인정보 처리방침' },
+                { id: 'OPERATION', label: '운영정책' },
+                { id: 'YOUTH', label: '청소년 보호정책' },
+                { id: 'LOCATION', label: '위치기반서비스 이용약관' },
+                { id: 'SAFETY_DISCLAIMER', label: '직업안정법·산재 책임분리' }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setSelectedPolicyTab(tab.id)}
+                  className={`px-2.5 py-1.5 rounded-lg font-extrabold text-[11px] border transition ${
+                    selectedPolicyTab === tab.id
+                      ? 'bg-emerald-500 text-slate-950 border-emerald-400'
+                      : 'bg-slate-950 text-slate-300 border-slate-800'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+<!-- ... existing code ... -->
